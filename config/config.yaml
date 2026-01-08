@@ -1,0 +1,142 @@
+# ============================================================================
+# ConforME - Configurações do Projeto
+# Automação de Compliance de Marketing com IA
+# ============================================================================
+
+# =====================
+# AUTENTICAÇÃO
+# =====================
+auth:
+  # Modo de autenticação:
+  # - "api_key": Para testes locais (usa Google AI Studio)
+  # - "vertex": Para produção (usa Vertex AI com ADC)
+  mode: "api_key"
+  
+  # Chave API do Google AI Studio (apenas para testes)
+  # OPÇÃO 1: Defina a variável de ambiente GOOGLE_API_KEY
+  # OPÇÃO 2: Preencha aqui (NÃO commitar com a key!)
+  api_key: ""
+  
+  # Configurações Vertex AI (produção)
+  project_id: "bv-sg3n-poc"
+  location: "us-central1"
+
+# =====================
+# MODELO DE IA
+# =====================
+ai:
+  # Modelo a utilizar
+  model_name: "gemini-2.0-flash-001"
+  
+  # Parâmetros de geração (otimizados para precisão)
+  temperature: 0.1        # Baixo = mais determinístico
+  max_output_tokens: 4096  # Espaço para respostas detalhadas
+  top_p: 0.85             # Núcleo de probabilidade
+  
+  # Timeout por chamada (segundos)
+  timeout_seconds: 120
+
+# =====================
+# PROCESSAMENTO
+# =====================
+processing:
+  # Quantos arquivos enviar por chamada à IA
+  batch_size: 5
+  
+  # Requests paralelos (1 = sequencial, evita rate limit)
+  concurrency: 1
+  
+  # Tentativas em caso de erro
+  retry_attempts: 3
+  retry_delay_seconds: 5
+
+# =====================
+# CAMINHOS
+# =====================
+paths:
+  # Pasta raiz para varredura de arquivos
+  source_folder: "G:\\Marketing\\Campanhas\\2025"
+  
+  # Pasta para planilhas de resultado
+  output_folder: "BancodeDados"
+  
+  # Pasta para arquivos temporários (JSON intermediário)
+  temp_folder: "TEMP"
+  
+  # Pasta com regras de compliance
+  rules_folder: "Regras"
+
+# =====================
+# EXTENSÕES ACEITAS
+# =====================
+accepted_extensions:
+  # Texto
+  - ".txt"
+  - ".html"
+  - ".htm"
+  - ".rtf"
+  
+  # Documentos
+  - ".pdf"
+  - ".docx"
+  - ".doc"
+  
+  # E-mail
+  - ".msg"
+  - ".eml"
+  
+  # Planilhas
+  - ".xlsx"
+  - ".xls"
+  - ".csv"
+  
+  # Imagens
+  - ".jpg"
+  - ".jpeg"
+  - ".png"
+  - ".gif"
+  - ".webp"
+  - ".bmp"
+  
+  # Apresentações
+  - ".pptx"
+  - ".ppt"
+
+# =====================
+# EXPORTAÇÃO
+# =====================
+export:
+  # Prefixo do nome do arquivo Excel
+  filename_prefix: "ResultadoConforme"
+  
+  # Formato da data no nome do arquivo
+  date_format: "%d%m%Y"
+  
+  # Nome do arquivo histórico cumulativo
+  master_filename: "historico_master.xlsx"
+
+# =====================
+# LOGGING
+# =====================
+logging:
+  # Nível: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  
+  # Arquivo de log (relativo ao projeto)
+  file: "logs/conforme.log"
+  
+  # Formato do log
+  format: "%(asctime)s | %(levelname)-8s | %(message)s"
+
+# =====================
+# CONTROLE
+# =====================
+control:
+  # Calcular hash SHA256 dos arquivos
+  use_hash: true
+  
+  # Pular arquivos já processados (baseado em hash)
+  skip_processed: false
+  
+  # Salvar resposta bruta da IA no JSON
+  save_raw_response: true

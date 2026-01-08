@@ -1,0 +1,36 @@
+# ConforME - Git Ignore
+
+# Ambiente e secrets
+.env
+*.env.local
+
+# Logs
+logs/
+*.log
+
+# Arquivos temporários
+TEMP/
+ArquivosHouse*/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Resultados (opcional - descomente se não quiser versionar)
+# BancodeDados/*.xlsx
