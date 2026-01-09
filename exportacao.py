@@ -1,16 +1,16 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ConforME - Exportação para Excel
+ConforME - Exportacao para Excel
 ================================
 
-Script 03/03 da automação de compliance de marketing.
+Script 03/03 da automacao de compliance de marketing.
 
 Responsabilidades:
 - Ler resultados JSON gerados pelo avaliacao_ia.py
-- Gerar planilha Excel independente (por execução)
-- Atualizar planilha cumulativa (histórico master)
-- Incluir todas as colunas obrigatórias
+- Gerar planilha Excel independente (por execucao)
+- Atualizar planilha cumulativa (historico master)
+- Incluir todas as colunas obrigatorias
 
 Autor: ConforME Team
 Data: Janeiro 2026
@@ -26,7 +26,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-# Importação condicional do openpyxl (único uso permitido: geração de Excel)
+# Importacao condicional do openpyxl (unico uso permitido: geracao de Excel)
 try:
     from openpyxl import Workbook, load_workbook
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -37,7 +37,7 @@ except ImportError:
 
 
 # ============================================================================
-# CONFIGURAÇÃO DE PATHS
+# CONFIGURACAO DE PATHS
 # ============================================================================
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
@@ -52,7 +52,7 @@ def setup_logging(config: Dict[str, Any]) -> logging.Logger:
     Configura o sistema de logging.
     
     Args:
-        config: Dicionário de configurações do YAML.
+        config: Dicionario de configuracoes do YAML.
         
     Returns:
         Logger configurado.
@@ -81,17 +81,17 @@ def setup_logging(config: Dict[str, Any]) -> logging.Logger:
 
 
 # ============================================================================
-# CONFIGURAÇÃO
+# CONFIGURACAO
 # ============================================================================
 def load_config() -> Dict[str, Any]:
     """
-    Carrega configurações do arquivo config.yaml.
+    Carrega configuracoes do arquivo config.yaml.
     
     Returns:
-        Dicionário com configurações.
+        Dicionario com configuracoes.
     """
     if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f"Arquivo de configuração não encontrado: {CONFIG_PATH}")
+        raise FileNotFoundError(f"Arquivo de configuracao nao encontrado: {CONFIG_PATH}")
     
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -111,10 +111,10 @@ def load_results(json_path: Path, logger: logging.Logger) -> Dict[str, Any]:
         logger: Logger.
         
     Returns:
-        Dicionário com resultados.
+        Dicionario com resultados.
     """
     if not json_path.exists():
-        raise FileNotFoundError(f"Arquivo de resultados não encontrado: {json_path}")
+        raise FileNotFoundError(f"Arquivo de resultados nao encontrado: {json_path}")
     
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -126,37 +126,128 @@ def load_results(json_path: Path, logger: logging.Logger) -> Dict[str, Any]:
 
 
 # ============================================================================
-# PREPARAÇÃO DE DADOS
+# DETERMINACAO DO RESULTADO
+# ============================================================================
+def determinar_resultado(campos: Dict[str, str], status: str, erro: str) -> str:
+    """
+    Determina o resultado baseado nos campos extraidos.
+    
+    Args:
+        campos: Campos extraidos da resposta da IA.
+        status: Status do processamento.
+        erro: Mensagem de erro, se houver.
+        
+    Returns:
+        Resultado: Aprovado, Reprovado, Inconclusivo ou vazio.
+    """
+    # Se houve erro no processamento, retorna vazio
+    if status == "erro" or erro:
+        return ""
+    
+    # Verifica o resultado da IA
+    resultado_ia = campos.get("RESULTADO", "").upper().strip()
+    
+    if resultado_ia in ["APROVADO", "APROVADA"]:
+        return "Aprovado"
+    elif resultado_ia in ["REPROVADO", "REPROVADA"]:
+        return "Reprovado"
+    elif resultado_ia in ["INCONCLUSIVO", "INCONCLUSIVA"]:
+        return "Inconclusivo"
+    
+    # Se nao conseguiu determinar pelo campo RESULTADO, analisa violacoes
+    violacoes = campos.get("VIOLACOES_ENCONTRADAS", "").strip()
+    
+    if violacoes and violacoes.lower() not in ["nenhuma", "nao", "n/a", "-", ""]:
+        return "Reprovado"
+    
+    # Se tem avaliacao mas sem violacoes claras
+    avaliacao = campos.get("AVALIACAO", "").strip()
+    if avaliacao and not violacoes:
+        return "Aprovado"
+    
+    return "Inconclusivo"
+
+
+def resumir_avaliacao(campos: Dict[str, str], max_chars: int = 500) -> str:
+    """
+    Resume a avaliacao em ate 500 caracteres.
+    
+    Args:
+        campos: Campos extraidos da resposta da IA.
+        max_chars: Maximo de caracteres.
+        
+    Returns:
+        Resumo da avaliacao.
+    """
+    avaliacao = campos.get("AVALIACAO", "").strip()
+    
+    if not avaliacao:
+        # Tenta montar a partir de outros campos
+        violacoes = campos.get("VIOLACOES_ENCONTRADAS", "").strip()
+        justificativa = campos.get("JUSTIFICATIVA", "").strip()
+        
+        if violacoes and violacoes.lower() not in ["nenhuma", "nao", "n/a", "-"]:
+            avaliacao = f"Violacoes: {violacoes}"
+            if justificativa:
+                avaliacao += f" | {justificativa}"
+        elif justificativa:
+            avaliacao = justificativa
+    
+    # Limita ao tamanho maximo
+    if len(avaliacao) > max_chars:
+        avaliacao = avaliacao[:max_chars-3] + "..."
+    
+    return avaliacao
+
+
+# ============================================================================
+# PREPARACAO DE DADOS
 # ============================================================================
 def prepare_excel_data(results: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Prepara dados dos resultados para formato tabular do Excel.
     
     Args:
-        results: Dicionário com resultados da avaliação.
+        results: Dicionario com resultados da avaliacao.
         
     Returns:
-        Lista de dicionários prontos para Excel.
+        Lista de dicionarios prontos para Excel.
     """
     rows = []
     
     for item in results.get("resultados", []):
         campos = item.get("campos_extraidos", {})
+        status = item.get("status", "")
+        erro = item.get("erro", "") or ""
+        
+        # Determina resultado
+        resultado = determinar_resultado(campos, status, erro)
+        
+        # Resume avaliacao
+        avaliacao_resumida = resumir_avaliacao(campos)
+        
+        # Monta caminho completo
+        caminho_completo = item.get("caminho", "") or ""
+        if not caminho_completo:
+            pasta_origem = item.get("pasta_origem", "")
+            arquivo = item.get("arquivo", "")
+            if pasta_origem and arquivo:
+                caminho_completo = str(Path(pasta_origem) / arquivo)
         
         row = {
             "Data": datetime.fromisoformat(item.get("data_avaliacao", "")).strftime("%d/%m/%Y %H:%M")
                    if item.get("data_avaliacao") else "",
             "Nome do Arquivo": item.get("arquivo", ""),
-            "Caminho Pasta": item.get("pasta_origem", ""),
+            "Caminho Pasta": caminho_completo,
             "Hash SHA256": item.get("hash_sha256", ""),
-            "Conteúdo Identificado": campos.get("CONTEUDO_IDENTIFICADO", ""),
-            "Violações Encontradas": campos.get("VIOLACOES_ENCONTRADAS", ""),
-            "Avaliação": campos.get("AVALIACAO", ""),
-            "Resultado": campos.get("RESULTADO", ""),
+            "Conteudo Identificado": campos.get("CONTEUDO_IDENTIFICADO", ""),
+            "Violacoes Encontradas": campos.get("VIOLACOES_ENCONTRADAS", ""),
+            "Avaliacao": avaliacao_resumida,
+            "Resultado": resultado,
             "Justificativa": campos.get("JUSTIFICATIVA", ""),
-            "Recomendações": campos.get("RECOMENDACOES", ""),
-            "Status Processamento": item.get("status", ""),
-            "Erro": item.get("erro", "") or "",
+            "Recomendacoes": campos.get("RECOMENDACOES", ""),
+            "Status Processamento": status,
+            "Erro": erro,
             "Parecer Final Humano": ""  # Sempre vazio inicialmente
         }
         
@@ -169,7 +260,7 @@ def prepare_excel_data(results: Dict[str, Any]) -> List[Dict[str, Any]]:
 # ESTILOS DO EXCEL
 # ============================================================================
 def get_header_style():
-    """Retorna estilo para cabeçalho do Excel."""
+    """Retorna estilo para cabecalho do Excel."""
     return {
         "font": Font(bold=True, color="FFFFFF", size=11),
         "fill": PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid"),
@@ -188,7 +279,7 @@ def get_result_fill(result: str) -> PatternFill:
     Retorna cor de fundo baseada no resultado.
     
     Args:
-        result: Resultado da avaliação.
+        result: Resultado da avaliacao.
         
     Returns:
         PatternFill com cor correspondente.
@@ -206,7 +297,7 @@ def get_result_fill(result: str) -> PatternFill:
 
 
 def get_cell_style():
-    """Retorna estilo para células de dados."""
+    """Retorna estilo para celulas de dados."""
     return {
         "alignment": Alignment(vertical="top", wrap_text=True),
         "border": Border(
@@ -219,14 +310,14 @@ def get_cell_style():
 
 
 # ============================================================================
-# GERAÇÃO DE EXCEL
+# GERACAO DE EXCEL
 # ============================================================================
 def create_excel_workbook(data: List[Dict[str, Any]], logger: logging.Logger) -> Workbook:
     """
     Cria workbook do Excel com os dados formatados.
     
     Args:
-        data: Lista de dicionários com dados.
+        data: Lista de dicionarios com dados.
         logger: Logger.
         
     Returns:
@@ -248,20 +339,20 @@ def create_excel_workbook(data: List[Dict[str, Any]], logger: logging.Logger) ->
     column_widths = {
         "Data": 18,
         "Nome do Arquivo": 30,
-        "Caminho Pasta": 40,
+        "Caminho Pasta": 50,
         "Hash SHA256": 15,
-        "Conteúdo Identificado": 40,
-        "Violações Encontradas": 35,
-        "Avaliação": 50,
+        "Conteudo Identificado": 40,
+        "Violacoes Encontradas": 35,
+        "Avaliacao": 60,
         "Resultado": 15,
         "Justificativa": 40,
-        "Recomendações": 40,
+        "Recomendacoes": 40,
         "Status Processamento": 15,
-        "Erro": 30,
+        "Erro": 40,
         "Parecer Final Humano": 40
     }
     
-    # Cabeçalho
+    # Cabecalho
     for col_idx, column_name in enumerate(columns, 1):
         cell = ws.cell(row=1, column=col_idx, value=column_name)
         cell.font = header_style["font"]
@@ -286,10 +377,10 @@ def create_excel_workbook(data: List[Dict[str, Any]], logger: logging.Logger) ->
                 cell.fill = get_result_fill(value)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Congela cabeçalho
+    # Congela cabecalho
     ws.freeze_panes = "A2"
     
-    # Altura da linha do cabeçalho
+    # Altura da linha do cabecalho
     ws.row_dimensions[1].height = 30
     
     logger.info(f"Workbook criado: {len(data)} linhas, {len(columns)} colunas")
@@ -303,11 +394,11 @@ def save_independent_excel(
     logger: logging.Logger
 ) -> Path:
     """
-    Salva planilha Excel independente (por execução).
+    Salva planilha Excel independente (por execucao).
     
     Args:
         wb: Workbook a salvar.
-        config: Configurações.
+        config: Configuracoes.
         logger: Logger.
         
     Returns:
@@ -324,7 +415,7 @@ def save_independent_excel(
     filename = f"{prefix}{date_str}.xlsx"
     filepath = output_dir / filename
     
-    # Se já existe, adiciona timestamp
+    # Se ja existe, adiciona timestamp
     if filepath.exists():
         timestamp = datetime.now().strftime("%H%M%S")
         filename = f"{prefix}{date_str}_{timestamp}.xlsx"
@@ -342,11 +433,11 @@ def update_master_excel(
     logger: logging.Logger
 ) -> Path:
     """
-    Atualiza planilha cumulativa (histórico master).
+    Atualiza planilha cumulativa (historico master).
     
     Args:
         data: Dados a adicionar.
-        config: Configurações.
+        config: Configuracoes.
         logger: Logger.
         
     Returns:
@@ -363,7 +454,7 @@ def update_master_excel(
         wb = load_workbook(master_path)
         ws = wb.active
         
-        # Encontra última linha
+        # Encontra ultima linha
         last_row = ws.max_row
         
         # Adiciona novos dados
@@ -382,15 +473,15 @@ def update_master_excel(
                     cell.fill = get_result_fill(value)
                     cell.alignment = Alignment(horizontal="center", vertical="center")
         
-        logger.info(f"Adicionados {len(data)} registros ao histórico master")
+        logger.info(f"Adicionados {len(data)} registros ao historico master")
         
     else:
         # Cria novo arquivo master
         wb = create_excel_workbook(data, logger)
-        logger.info("Criado novo arquivo histórico master")
+        logger.info("Criado novo arquivo historico master")
     
     wb.save(master_path)
-    logger.info(f"Histórico master atualizado: {master_path}")
+    logger.info(f"Historico master atualizado: {master_path}")
     
     return master_path
 
@@ -400,36 +491,36 @@ def update_master_excel(
 # ============================================================================
 def main() -> int:
     """
-    Função principal do script de exportação.
+    Funcao principal do script de exportacao.
     
     Returns:
-        Código de saída (0 = sucesso, 1 = erro).
+        Codigo de saida (0 = sucesso, 1 = erro).
     """
     print("\n" + "=" * 60)
-    print("ConforME - Exportação para Excel")
+    print("ConforME - Exportacao para Excel")
     print("=" * 60 + "\n")
     
-    # Verifica dependências
+    # Verifica dependencias
     if not EXCEL_SUPPORT:
-        print("❌ Erro: openpyxl não instalado. Use: pip install openpyxl")
+        print("[ERRO] openpyxl nao instalado. Use: pip install openpyxl")
         return 1
     
     # Parse argumentos
-    parser = argparse.ArgumentParser(description="Exportação de resultados para Excel")
+    parser = argparse.ArgumentParser(description="Exportacao de resultados para Excel")
     parser.add_argument(
         "--input", "-i",
         type=str,
         required=True,
-        help="Caminho do arquivo JSON com resultados da avaliação"
+        help="Caminho do arquivo JSON com resultados da avaliacao"
     )
     args = parser.parse_args()
     
     try:
-        # Carrega configurações
+        # Carrega configuracoes
         config = load_config()
         logger = setup_logging(config)
         
-        logger.info("Iniciando processo de exportação")
+        logger.info("Iniciando processo de exportacao")
         
         # Carrega resultados
         logger.info("-" * 40)
@@ -441,7 +532,7 @@ def main() -> int:
         
         # Prepara dados
         logger.info("-" * 40)
-        logger.info("ETAPA 2: Preparação dos dados")
+        logger.info("ETAPA 2: Preparacao dos dados")
         logger.info("-" * 40)
         
         data = prepare_excel_data(results)
@@ -454,7 +545,7 @@ def main() -> int:
         
         # Gera Excel independente
         logger.info("-" * 40)
-        logger.info("ETAPA 3: Geração do Excel independente")
+        logger.info("ETAPA 3: Geracao do Excel independente")
         logger.info("-" * 40)
         
         wb = create_excel_workbook(data, logger)
@@ -462,7 +553,7 @@ def main() -> int:
         
         # Atualiza master
         logger.info("-" * 40)
-        logger.info("ETAPA 4: Atualização do histórico master")
+        logger.info("ETAPA 4: Atualizacao do historico master")
         logger.info("-" * 40)
         
         master_path = update_master_excel(data, config, logger)
@@ -471,33 +562,35 @@ def main() -> int:
         # Conta resultados
         approved = sum(1 for d in data if d.get("Resultado", "").upper() == "APROVADO")
         rejected = sum(1 for d in data if d.get("Resultado", "").upper() == "REPROVADO")
-        inconclusive = len(data) - approved - rejected
+        inconclusive = sum(1 for d in data if d.get("Resultado", "").upper() == "INCONCLUSIVO")
+        errors = len(data) - approved - rejected - inconclusive
         
         logger.info("=" * 40)
-        logger.info("EXPORTAÇÃO CONCLUÍDA")
+        logger.info("EXPORTACAO CONCLUIDA")
         logger.info("=" * 40)
         logger.info(f"Total: {len(data)} registros")
-        logger.info(f"  ✓ Aprovados: {approved}")
-        logger.info(f"  ✗ Reprovados: {rejected}")
-        logger.info(f"  ? Inconclusivos: {inconclusive}")
+        logger.info(f"  Aprovados: {approved}")
+        logger.info(f"  Reprovados: {rejected}")
+        logger.info(f"  Inconclusivos: {inconclusive}")
+        logger.info(f"  Com erro: {errors}")
         
-        print(f"\n✅ Exportação concluída!")
-        print(f"   📊 Planilha independente: {independent_path}")
-        print(f"   📚 Histórico master: {master_path}")
+        print(f"\n[OK] Exportacao concluida!")
+        print(f"   [EXCEL] Planilha independente: {independent_path}")
+        print(f"   [MASTER] Historico master: {master_path}")
         print(f"\n   Resumo:")
-        print(f"      Total: {len(data)} | Aprovados: {approved} | Reprovados: {rejected} | Inconclusivos: {inconclusive}\n")
+        print(f"      Total: {len(data)} | Aprovados: {approved} | Reprovados: {rejected} | Inconclusivos: {inconclusive} | Erros: {errors}\n")
         
         return 0
         
     except FileNotFoundError as e:
-        print(f"\n❌ Arquivo não encontrado: {e}")
+        print(f"\n[ERRO] Arquivo nao encontrado: {e}")
         return 1
     except ValueError as e:
-        print(f"\n❌ Erro de dados: {e}")
+        print(f"\n[ERRO] Erro de dados: {e}")
         return 1
     except Exception as e:
-        print(f"\n❌ Erro inesperado: {e}")
-        logging.exception("Erro fatal na execução")
+        print(f"\n[ERRO] Erro inesperado: {e}")
+        logging.exception("Erro fatal na execucao")
         return 1
 
 

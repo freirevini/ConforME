@@ -1,23 +1,13 @@
 # ============================================================================
-# ConforME - Configurações do Projeto
-# Automação de Compliance de Marketing com IA
+# ConforME - Configuracoes do Projeto
+# Automacao de Compliance de Marketing com IA (Vertex AI)
 # ============================================================================
 
 # =====================
-# AUTENTICAÇÃO
+# AUTENTICACAO VERTEX AI
 # =====================
 auth:
-  # Modo de autenticação:
-  # - "api_key": Para testes locais (usa Google AI Studio)
-  # - "vertex": Para produção (usa Vertex AI com ADC)
-  mode: "api_key"
-  
-  # Chave API do Google AI Studio (apenas para testes)
-  # OPÇÃO 1: Defina a variável de ambiente GOOGLE_API_KEY
-  # OPÇÃO 2: Preencha aqui (NÃO commitar com a key!)
-  api_key: ""
-  
-  # Configurações Vertex AI (produção)
+  # Projeto GCP
   project_id: "bv-sg3n-poc"
   location: "us-central1"
 
@@ -26,21 +16,84 @@ auth:
 # =====================
 ai:
   # Modelo a utilizar
-  model_name: "gemini-2.0-flash-001"
+  # Opcoes disponiveis:
+  # - gemini-2.5-flash     (recomendado: rapido + precisao)
+  # - gemini-2.5-flash-lite (mais rapido, menos preciso)
+  # - gemini-2.5-pro       (mais preciso, mais lento)
+  # - gemini-2.0-flash     (versao anterior)
+  model_name: "gemini-2.5-flash"
   
-  # Parâmetros de geração (otimizados para precisão)
-  temperature: 0.1        # Baixo = mais determinístico
-  max_output_tokens: 4096  # Espaço para respostas detalhadas
-  top_p: 0.85             # Núcleo de probabilidade
+  # -------------------------------------------------------
+  # PARAMETROS DE AMOSTRAGEM
+  # Controlam criatividade e diversidade das respostas
+  # -------------------------------------------------------
+  
+  # temperature: Controla quao criativo/aleatorio e o texto
+  # - 0.0: Sempre escolhe o token mais provavel (deterministico)
+  # - 0.1-0.3: Respostas consistentes e focadas (RECOMENDADO para compliance)
+  # - 0.5-0.7: Equilibrio entre consistencia e criatividade
+  # - 1.0+: Respostas mais livres e inventivas
+  # Faixa: 0.0 a 2.0 (Gemini 2.5)
+  temperature: 0.1
+  
+  # top_p (Nucleus Sampling): Filtra tokens ate soma de probabilidades >= top_p
+  # - 0.1-0.3: Texto mais previsivel e conservador
+  # - 0.5-0.7: Equilibrio
+  # - 0.8-1.0: Maior diversidade de vocabulario
+  # Faixa: 0.0 a 1.0
+  top_p: 0.85
+  
+  # top_k: Numero maximo de tokens considerados por etapa
+  # - 1-10: Resposta mais "segura" e deterministica
+  # - 20-40: Equilibrio (RECOMENDADO para compliance)
+  # - 50-100: Respostas mais amplas e variadas
+  # Faixa: 1 a 100+
+  top_k: 40
+  
+  # -------------------------------------------------------
+  # CONTROLE DE SAIDA / COMPRIMENTO
+  # -------------------------------------------------------
+  
+  # max_output_tokens: Maximo de tokens na resposta
+  # - Respostas curtas: 256-512
+  # - Respostas medias: 1024-2048
+  # - Respostas longas: 4096-8192
+  # ATENCAO: Se exceder, resposta pode ser cortada
+  max_output_tokens: 4096
+  
+  # stop_sequences: Cadeias que encerram a geracao imediatamente
+  # Util para controlar formatos fixos
+  # Exemplo: ["FIM", "---", "END"]
+  stop_sequences: []
+  
+  # -------------------------------------------------------
+  # PARAMETROS AUXILIARES
+  # -------------------------------------------------------
+  
+  # candidate_count: Gera multiplas respostas alternativas (1-8)
+  # Util para comparar variacoes e escolher melhor resposta
+  # NOTA: Aumenta custo/tokens proporcionalmente
+  candidate_count: 1
+  
+  # seed: Semente para randomizacao (respostas reprodutiveis)
+  # - null: Aleatorio a cada chamada
+  # - numero fixo: Mesma resposta para mesmo input
+  # Util para testes e debugging
+  seed: null
+  
+  # -------------------------------------------------------
+  # TIMEOUT
+  # -------------------------------------------------------
   
   # Timeout por chamada (segundos)
+  # Imagens grandes podem demorar mais
   timeout_seconds: 120
 
 # =====================
 # PROCESSAMENTO
 # =====================
 processing:
-  # Quantos arquivos enviar por chamada à IA
+  # Quantos arquivos processar em sequencia antes de pausar
   batch_size: 5
   
   # Requests paralelos (1 = sequencial, evita rate limit)
@@ -48,85 +101,94 @@ processing:
   
   # Tentativas em caso de erro
   retry_attempts: 3
-  retry_delay_seconds: 5
+  retry_delay_seconds: 10
+  
+  # Pausa entre chamadas (segundos) - evita rate limit
+  delay_between_calls: 1.0
 
 # =====================
 # CAMINHOS
 # =====================
 paths:
   # Pasta raiz para varredura de arquivos
-  source_folder: "G:\\Marketing\\Campanhas\\2025"
+  source_folder: "Testes"
   
   # Pasta para planilhas de resultado
   output_folder: "BancodeDados"
   
-  # Pasta para arquivos temporários (JSON intermediário)
+  # Pasta para arquivos temporarios (JSON intermediario)
   temp_folder: "TEMP"
   
   # Pasta com regras de compliance
   rules_folder: "Regras"
 
 # =====================
-# EXTENSÕES ACEITAS
+# EXTENSOES ACEITAS
 # =====================
-accepted_extensions:
-  # Texto
-  - ".txt"
-  - ".html"
-  - ".htm"
-  - ".rtf"
+extensions:
+  # Documentos de texto
+  text:
+    - ".txt"
+    - ".html"
+    - ".htm"
+    - ".rtf"
   
-  # Documentos
-  - ".pdf"
-  - ".docx"
-  - ".doc"
+  # Documentos (suportados pelo Vertex AI)
+  documents:
+    - ".pdf"
+    - ".docx"
+    - ".doc"
   
-  # E-mail
-  - ".msg"
-  - ".eml"
+  # E-mails
+  email:
+    - ".msg"
+    - ".eml"
   
   # Planilhas
-  - ".xlsx"
-  - ".xls"
-  - ".csv"
+  spreadsheets:
+    - ".xlsx"
+    - ".xls"
+    - ".csv"
   
-  # Imagens
-  - ".jpg"
-  - ".jpeg"
-  - ".png"
-  - ".gif"
-  - ".webp"
-  - ".bmp"
+  # Imagens (suportadas pelo Vertex AI)
+  images:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".gif"
+    - ".webp"
+    - ".bmp"
   
-  # Apresentações
-  - ".pptx"
-  - ".ppt"
+  # Apresentacoes
+  presentations:
+    - ".pptx"
+    - ".ppt"
 
 # =====================
-# EXPORTAÇÃO
+# EXPORTACAO EXCEL
 # =====================
 export:
-  # Prefixo do nome do arquivo Excel
+  # Prefixo do nome do arquivo
   filename_prefix: "ResultadoConforme"
   
-  # Formato da data no nome do arquivo
+  # Formato da data no nome
   date_format: "%d%m%Y"
   
-  # Nome do arquivo histórico cumulativo
+  # Nome do arquivo de historico cumulativo
   master_filename: "historico_master.xlsx"
 
 # =====================
 # LOGGING
 # =====================
 logging:
-  # Nível: DEBUG, INFO, WARNING, ERROR
+  # Nivel de log: DEBUG, INFO, WARNING, ERROR
   level: "INFO"
-  
-  # Arquivo de log (relativo ao projeto)
-  file: "logs/conforme.log"
   
   # Formato do log
   format: "%(asctime)s | %(levelname)-8s | %(message)s"
+  
+  # Arquivo de log
+  file: "logs/conforme.log"
 
 # =====================
 # CONTROLE
@@ -135,7 +197,7 @@ control:
   # Calcular hash SHA256 dos arquivos
   use_hash: true
   
-  # Pular arquivos já processados (baseado em hash)
+  # Pular arquivos ja processados (baseado no hash)
   skip_processed: false
   
   # Salvar resposta bruta da IA no JSON

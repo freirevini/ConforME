@@ -1,5 +1,5 @@
-# ConforME - Automação de Compliance de Marketing
-# Dependências do projeto
+# ConforME - Automacao de Compliance de Marketing
+# Dependencias do projeto (Vertex AI)
 
 # ===========================
 # CORE
@@ -7,23 +7,25 @@
 PyYAML>=6.0.1           # Leitura de config.yaml
 
 # ===========================
-# EXPORTAÇÃO EXCEL
+# EXPORTACAO EXCEL
 # ===========================
-openpyxl>=3.1.2         # Geração de planilhas Excel
+openpyxl>=3.1.2         # Geracao de planilhas Excel
 
 # ===========================
-# IA - PRODUÇÃO (Vertex AI)
-# Descomente para produção
+# IA - VERTEX AI (PRODUCAO)
 # ===========================
-# google-genai>=1.0.0
+google-genai>=1.0.0     # Cliente Vertex AI
 
 # ===========================
-# IA - TESTES (API Key)
-# Use para testes locais
+# AUTENTICACAO
 # ===========================
-google-generativeai>=0.8.0
-
-# ===========================
-# OPCIONAL
-# ===========================
-# python-dotenv>=1.0.0   # Se quiser usar .env para API keys
+# Antes de executar, configure as credenciais:
+#
+# 1. No ambiente local:
+#    gcloud auth application-default login
+#
+# 2. Em Cloud Run/GKE:
+#    Use a service account do ambiente
+#
+# 3. Com service account key:
+#    export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"

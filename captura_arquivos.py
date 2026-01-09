@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 ConforME - Captura de Arquivos
 ==============================
 
-Script 01/03 da automação de compliance de marketing.
+Script 01/03 da automaÃ§Ã£o de compliance de marketing.
 
 Responsabilidades:
-- Percorrer árvore de pastas em busca de arquivos de marketing
-- Filtrar por extensões aceitas
+- Percorrer Ã¡rvore de pastas em busca de arquivos de marketing
+- Filtrar por extensÃµes aceitas
 - Copiar arquivos para pasta de processamento (ArquivosHouseDDMMYYYY)
 - Calcular hash SHA256 para rastreabilidade
 - Gerar manifest.json com metadados dos arquivos
@@ -30,7 +30,7 @@ from typing import Dict, List, Any, Optional
 
 
 # ============================================================================
-# CONFIGURAÇÃO DE PATHS
+# CONFIGURAÃ‡ÃƒO DE PATHS
 # ============================================================================
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
@@ -45,7 +45,7 @@ def setup_logging(config: Dict[str, Any]) -> logging.Logger:
     Configura o sistema de logging.
     
     Args:
-        config: Dicionário de configurações do YAML.
+        config: DicionÃ¡rio de configuraÃ§Ãµes do YAML.
         
     Returns:
         Logger configurado.
@@ -54,7 +54,7 @@ def setup_logging(config: Dict[str, Any]) -> logging.Logger:
     log_level = getattr(logging, log_config.get("level", "INFO").upper())
     log_format = log_config.get("format", "%(asctime)s | %(levelname)-8s | %(message)s")
     
-    # Cria pasta de logs se não existir
+    # Cria pasta de logs se nÃ£o existir
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     
     # Configura handlers
@@ -76,21 +76,21 @@ def setup_logging(config: Dict[str, Any]) -> logging.Logger:
 
 
 # ============================================================================
-# CONFIGURAÇÃO
+# CONFIGURAÃ‡ÃƒO
 # ============================================================================
 def load_config() -> Dict[str, Any]:
     """
-    Carrega configurações do arquivo config.yaml.
+    Carrega configuraÃ§Ãµes do arquivo config.yaml.
     
     Returns:
-        Dicionário com configurações.
+        DicionÃ¡rio com configuraÃ§Ãµes.
         
     Raises:
-        FileNotFoundError: Se config.yaml não existir.
-        yaml.YAMLError: Se YAML for inválido.
+        FileNotFoundError: Se config.yaml nÃ£o existir.
+        yaml.YAMLError: Se YAML for invÃ¡lido.
     """
     if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f"Arquivo de configuração não encontrado: {CONFIG_PATH}")
+        raise FileNotFoundError(f"Arquivo de configuraÃ§Ã£o nÃ£o encontrado: {CONFIG_PATH}")
     
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -114,7 +114,7 @@ def calculate_file_hash(file_path: Path) -> str:
     sha256_hash = hashlib.sha256()
     
     with open(file_path, "rb") as f:
-        # Lê em blocos para não sobrecarregar memória
+        # LÃª em blocos para nÃ£o sobrecarregar memÃ³ria
         for byte_block in iter(lambda: f.read(65536), b""):
             sha256_hash.update(byte_block)
     
@@ -134,23 +134,23 @@ def scan_source_folder(
     
     Args:
         source_folder: Pasta raiz para varredura.
-        accepted_extensions: Lista de extensões aceitas (com ponto).
-        logger: Logger para registrar operações.
+        accepted_extensions: Lista de extensÃµes aceitas (com ponto).
+        logger: Logger para registrar operaÃ§Ãµes.
         
     Returns:
-        Lista de dicionários com metadados dos arquivos encontrados.
+        Lista de dicionÃ¡rios com metadados dos arquivos encontrados.
     """
     files_found = []
     accepted_set = set(ext.lower() for ext in accepted_extensions)
     
     logger.info(f"Iniciando varredura em: {source_folder}")
-    logger.info(f"Extensões aceitas: {', '.join(accepted_extensions)}")
+    logger.info(f"ExtensÃµes aceitas: {', '.join(accepted_extensions)}")
     
     if not source_folder.exists():
-        logger.error(f"Pasta de origem não existe: {source_folder}")
+        logger.error(f"Pasta de origem nÃ£o existe: {source_folder}")
         return files_found
     
-    # Percorre árvore de diretórios
+    # Percorre Ã¡rvore de diretÃ³rios
     for root, dirs, files in os.walk(source_folder):
         root_path = Path(root)
         
@@ -158,9 +158,9 @@ def scan_source_folder(
             file_path = root_path / filename
             ext = file_path.suffix.lower()
             
-            # Verifica extensão
+            # Verifica extensÃ£o
             if ext not in accepted_set:
-                logger.debug(f"Ignorando (extensão não aceita): {filename}")
+                logger.debug(f"Ignorando (extensÃ£o nÃ£o aceita): {filename}")
                 continue
             
             try:
@@ -174,7 +174,7 @@ def scan_source_folder(
                     "extensao": ext,
                     "tamanho_bytes": stat.st_size,
                     "data_modificacao": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "hash_sha256": None  # Será preenchido após cópia
+                    "hash_sha256": None  # SerÃ¡ preenchido apÃ³s cÃ³pia
                 }
                 
                 files_found.append(file_info)
@@ -188,7 +188,7 @@ def scan_source_folder(
 
 
 # ============================================================================
-# CÓPIA DE ARQUIVOS
+# CÃ“PIA DE ARQUIVOS
 # ============================================================================
 def copy_files_to_house(
     files: List[Dict[str, Any]],
@@ -201,9 +201,9 @@ def copy_files_to_house(
     
     Args:
         files: Lista de metadados dos arquivos.
-        base_dir: Diretório base do projeto.
+        base_dir: DiretÃ³rio base do projeto.
         use_hash: Se True, calcula hash SHA256.
-        logger: Logger para registrar operações.
+        logger: Logger para registrar operaÃ§Ãµes.
         
     Returns:
         Tupla (caminho da pasta house, lista de arquivos com paths atualizados).
@@ -212,7 +212,7 @@ def copy_files_to_house(
     date_suffix = datetime.now().strftime("%d%m%Y")
     house_folder = base_dir / f"ArquivosHouse{date_suffix}"
     
-    # Cria pasta (se já existir, adiciona timestamp)
+    # Cria pasta (se jÃ¡ existir, adiciona timestamp)
     if house_folder.exists():
         timestamp = datetime.now().strftime("%H%M%S")
         house_folder = base_dir / f"ArquivosHouse{date_suffix}_{timestamp}"
@@ -260,7 +260,7 @@ def copy_files_to_house(
             logger.error(f"[{i}/{len(files)}] Erro ao copiar {source_path.name}: {e}")
     
     success_count = sum(1 for f in copied_files if f["status_copia"] == "sucesso")
-    logger.info(f"Cópia concluída: {success_count}/{len(files)} arquivos")
+    logger.info(f"CÃ³pia concluÃ­da: {success_count}/{len(files)} arquivos")
     
     return house_folder, copied_files
 
@@ -275,13 +275,13 @@ def generate_manifest(
     logger: logging.Logger
 ) -> Path:
     """
-    Gera arquivo manifest.json com metadados da execução.
+    Gera arquivo manifest.json com metadados da execuÃ§Ã£o.
     
     Args:
         house_folder: Pasta onde os arquivos foram copiados.
         files: Lista de metadados dos arquivos.
-        config: Configurações do projeto.
-        logger: Logger para registrar operações.
+        config: ConfiguraÃ§Ãµes do projeto.
+        logger: Logger para registrar operaÃ§Ãµes.
         
     Returns:
         Caminho do arquivo manifest.json gerado.
@@ -316,23 +316,23 @@ def generate_manifest(
 # ============================================================================
 def main() -> int:
     """
-    Função principal do script de captura.
+    FunÃ§Ã£o principal do script de captura.
     
     Returns:
-        Código de saída (0 = sucesso, 1 = erro).
+        CÃ³digo de saÃ­da (0 = sucesso, 1 = erro).
     """
     print("\n" + "=" * 60)
     print("ConforME - Captura de Arquivos")
     print("=" * 60 + "\n")
     
     try:
-        # Carrega configurações
+        # Carrega configuraÃ§Ãµes
         config = load_config()
         logger = setup_logging(config)
         
         logger.info("Iniciando processo de captura de arquivos")
         
-        # Extrai configurações
+        # Extrai configuraÃ§Ãµes
         source_folder = Path(config["paths"]["source_folder"])
         accepted_extensions = config["accepted_extensions"]
         use_hash = config["control"]["use_hash"]
@@ -348,9 +348,9 @@ def main() -> int:
             logger.warning("Nenhum arquivo encontrado para processar.")
             return 0
         
-        # 2. Cópia
+        # 2. CÃ³pia
         logger.info("-" * 40)
-        logger.info("ETAPA 2: Cópia de arquivos")
+        logger.info("ETAPA 2: CÃ³pia de arquivos")
         logger.info("-" * 40)
         
         house_folder, copied_files = copy_files_to_house(
@@ -359,32 +359,33 @@ def main() -> int:
         
         # 3. Manifest
         logger.info("-" * 40)
-        logger.info("ETAPA 3: Geração do manifest")
+        logger.info("ETAPA 3: GeraÃ§Ã£o do manifest")
         logger.info("-" * 40)
         
         manifest_path = generate_manifest(house_folder, copied_files, config, logger)
         
         # Resumo final
         logger.info("=" * 40)
-        logger.info("CAPTURA CONCLUÍDA")
+        logger.info("CAPTURA CONCLUÃDA")
         logger.info("=" * 40)
         logger.info(f"Pasta de destino: {house_folder}")
         logger.info(f"Manifest: {manifest_path}")
         logger.info(f"Total processado: {len(copied_files)} arquivos")
         
-        print(f"\n✅ Captura concluída! Arquivos em: {house_folder}")
+        print(f"\nâœ… Captura concluÃ­da! Arquivos em: {house_folder}")
         print(f"   Execute agora: python avaliacao_ia.py --manifest \"{manifest_path}\"\n")
         
         return 0
         
     except FileNotFoundError as e:
-        print(f"\n❌ Erro de configuração: {e}")
+        print(f"\nâŒ Erro de configuraÃ§Ã£o: {e}")
         return 1
     except Exception as e:
-        print(f"\n❌ Erro inesperado: {e}")
-        logging.exception("Erro fatal na execução")
+        print(f"\nâŒ Erro inesperado: {e}")
+        logging.exception("Erro fatal na execuÃ§Ã£o")
         return 1
 
 
 if __name__ == "__main__":
     sys.exit(main())
+
